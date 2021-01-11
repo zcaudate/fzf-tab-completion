@@ -1,7 +1,7 @@
 _FZF_COMPLETION_SEP=$'\x01'
 
 _fzf_bash_completion_awk_escape() {
-    sed 's/\\/\\\\\\\\/g; s/[[*^$.]/\\\\&/g' <<<"$1"
+    gsed 's/\\/\\\\\\\\/g; s/[[*^$.]/\\\\&/g' <<<"$1"
 }
 
 # shell parsing stuff
@@ -19,7 +19,7 @@ _fzf_bash_completion_shell_split() {
 }
 
 _fzf_bash_completion_unbuffered_awk() {
-    awk "${@:3}" "$1 { $2; print \$0; system(\"\") }"
+    gawk "${@:3}" "$1 { $2; print \$0; system(\"\") }"
 }
 
 _fzf_bash_completion_flatten_subshells() {
@@ -69,7 +69,7 @@ _fzf_bash_completion_parse_dq() {
         local word=
         while true; do
             # we are in a double quoted string
-            _shell="$(<<<"$shell" sed -r 's/^(\\.|[^"$])*\$\(//')"
+            _shell="$(<<<"$shell" gsed -r 's/^(\\.|[^"$])*\$\(//')"
 
             if [ "$shell" = "$_shell" ]; then
                 # no subshells
@@ -105,7 +105,7 @@ _fzf_bash_completion_parse_line() {
         | _fzf_bash_completion_parse_dq \
         | _fzf_bash_completion_flatten_subshells \
         | tr \\n \\0 \
-        | sed -r "$(cat <<'EOF'
+        | gsed -r "$(cat <<'EOF'
 s/\x00\s*\x00/\n/g;
 s/\x00(\s*)$/\n\1/;
 s/([^&\n\x00])&([^&\n\x00])/\1\n\&\n\2/g;
@@ -224,7 +224,7 @@ _fzf_bash_completion_get_results() {
         fi
 
         echo compl_filenames=1 >&"${__evaled}"
-        find -L "$prefix" -mindepth 1 "${flags[@]}" \( -type d -printf "%p/\n" , -type f -print \) 2>/dev/null | sed 's,^\./,,'
+        find -L "$prefix" -mindepth 1 "${flags[@]}" \( -type d -printf "%p/\n" , -type f -print \) 2>/dev/null | gsed 's,^\./,,'
     else
         _fzf_bash_completion_complete "$@"
     fi
@@ -382,7 +382,7 @@ _fzf_bash_completion_complete() {
 
             echo
         ) | _fzf_bash_completion_apply_xfilter "$compl_xfilter" \
-          | _fzf_bash_completion_unbuffered_awk '$0!=""' 'sub(find, replace)' -vfind='.*' -vreplace="$(printf %s "$compl_prefix" | sed 's/[&\]/\\&/g')&$(printf %s "$compl_suffix" | sed 's/[&\]/\\&/g')" \
+          | _fzf_bash_completion_unbuffered_awk '$0!=""' 'sub(find, replace)' -vfind='.*' -vreplace="$(printf %s "$compl_prefix" | gsed 's/[&\]/\\&/g')&$(printf %s "$compl_suffix" | gsed 's/[&\]/\\&/g')" \
           | if IFS= read -r line; then
                 echo "$line"; cat
             else
@@ -399,17 +399,17 @@ _fzf_bash_completion_complete() {
             compgen -o dirnames -- "$2"
         fi
     ) \
-    | _fzf_bash_completion_unbuffered_awk '' 'sub(find, replace)' -vfind="^$(_fzf_bash_completion_awk_escape "$2")" -vreplace="$(sed -r 's/\\(.)/\1/g; s/[&\]/\\&/g' <<<"$2")" \
+    | _fzf_bash_completion_unbuffered_awk '' 'sub(find, replace)' -vfind="^$(_fzf_bash_completion_awk_escape "$2")" -vreplace="$(gsed -r 's/\\(.)/\1/g; s/[&\]/\\&/g' <<<"$2")" \
     | "$dir_marker"
 }
 
 _fzf_bash_completion_apply_xfilter() {
     local pattern line
     if [ "${1::1}" = ! ]; then
-        pattern="$(sed 's/\(\(^\|[^\]\)\(\\\\\)*\)&/\1x/g' <<<"${1:1}")"
+        pattern="$(gsed 's/\(\(^\|[^\]\)\(\\\\\)*\)&/\1x/g' <<<"${1:1}")"
         while IFS= read -r line; do [[ "$line" != $pattern ]] && echo "$line"; done
     elif [ -n "$1" ]; then
-        pattern="$(sed 's/\(\(^\|[^\]\)\(\\\\\)*\)&/\1x/g' <<<"$1")"
+        pattern="$(gsed 's/\(\(^\|[^\]\)\(\\\\\)*\)&/\1x/g' <<<"$1")"
         while IFS= read -r line; do [[ "$line" == $pattern ]] && echo "$line"; done
     else
         cat
